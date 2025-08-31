@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BudgetMaster - Debug</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <h1>BudgetMaster Debug Page</h1>
+    
+    <div id="status">Loading...</div>
+    
+    <div id="auth-status">Not authenticated</div>
+    
+    <button onclick="testConnection()">Test Supabase Connection</button>
+    <button onclick="testAuth()">Test Authentication</button>
+    <button onclick="clearSession()">Clear Session</button>
+    
+    <div id="logs"></div>
+
+    <script>
+        const SUPABASE_URL = 'https://siqtcjlkkwywvujeooim.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpcXRjamxra3d5d3Z1amVvb2ltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY0OTIxMjUsImV4cCI6MjA3MjA2ODEyNX0.JgzaELyTZ74ZtW45y7ZGSG3BfxM4FhRoX_kHP7q9ymA';
+
+        let supabase;
+
+        function log(message) {
+            const logs = document.getElementById('logs');
+            const timestamp = new Date().toLocaleTimeString();
+            logs.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+            console.log(message);
+        }
+
+        async function initSupabase() {
+            try {
+                log('Initializing Supabase client...');
+                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                log('Supabase client initialized successfully');
+                
+                // Check session
+                const { data: { session }, error } = await supabase.auth.getSession();
+                if (error) {
+                    log('Error checking session: ' + error.message);
+                } else if (session) {
+                    log('User is authenticated: ' + session.user.email);
+                    document.getElementById('auth-status').textContent = 'Authenticated as: ' + session.user.email;
+                } else {
+                    log('No active session found');
+                }
+                
+                document.getElementById('status').textContent = 'Ready';
+            } catch (error) {
+                log('Error initializing Supabase: ' + error.message);
+                document.getElementById('status').textContent = 'Error: ' + error.message;
+            }
+        }
+
+        async function testConnection() {
+            try {
+                log('Testing Supabase connection...');
+                const { data, error } = await supabase.from('users').select('count').limit(1);
+                
+                if (error) {
+                    log('Connection test failed: ' + error.message);
+                } else {
+                    log('Connection test successful');
+                }
+            } catch (error) {
+                log('Connection test error: ' + error.message);
+            }
+        }
+
+        async function testAuth() {
+            try {
+                log('Testing authentication...');
+                const { data: { session }, error } = await supabase.auth.getSession();
+                
+                if (error) {
+                    log('Auth test error: ' + error.message);
+                } else if (session) {
+                    log('Auth test: User is logged in');
+                    log('User ID: ' + session.user.id);
+                    log('User email: ' + session.user.email);
+                } else {
+                    log('Auth test: No active session');
+                }
+            } catch (error) {
+                log('Auth test error: ' + error.message);
+            }
+        }
+
+        async function clearSession() {
+            try {
+                log('Clearing session...');
+                const { error } = await supabase.auth.signOut();
+                
+                if (error) {
+                    log('Sign out error: ' + error.message);
+                } else {
+                    log('Session cleared successfully');
+                    document.getElementById('auth-status').textContent = 'Not authenticated';
+                }
+            } catch (error) {
+                log('Clear session error: ' + error.message);
+            }
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', initSupabase);
+    </script>
+</body>
+</html>
+

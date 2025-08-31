@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BudgetMaster - Professional Finance Dashboard</title>
+    <meta name="description" content="Track your expenses, manage your budget, and visualize your spending with our modern finance dashboard.">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <!-- Sticky Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <div class="brand-icon">💰</div>
+                <h1 class="brand-name">BudgetMaster</h1>
+            </div>
+            <div class="nav-actions">
+                <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
+                    <span class="theme-icon">🌙</span>
+                </button>
+                <button class="btn btn-outline" id="exportBtn">Export</button>
+                <button class="btn btn-outline" id="importBtn">Import</button>
+                <div class="user-menu">
+                    <span class="user-name" id="userName">User</span>
+                    <button class="btn btn-outline" id="profileBtn">Profile</button>
+                    <button class="btn btn-outline btn-danger" id="logoutBtn">Logout</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            <!-- Dashboard Header -->
+            <header class="dashboard-header">
+                <div class="header-content">
+                    <h2 class="header-title">Financial Dashboard</h2>
+                    <p class="header-subtitle">Track your spending and stay on budget</p>
+                </div>
+            </header>
+
+            <!-- Key Metrics Cards -->
+            <section class="metrics-section">
+                <div class="metrics-grid">
+                    <!-- Budget Card -->
+                    <div class="metric-card budget-card">
+                        <div class="card-header">
+                            <div class="card-icon">💰</div>
+                            <h3 class="card-title">Monthly Budget</h3>
+                            <button class="edit-btn" id="editBudgetBtn" aria-label="Edit budget">
+                                <span class="edit-icon">✏️</span>
+                            </button>
+                        </div>
+                        <div class="card-content">
+                            <div class="metric-value" id="budgetAmount">$0</div>
+                            <div class="budget-progress">
+                                <div class="progress-bar">
+                                    <div class="progress-fill" id="budgetProgress" style="width: 0%"></div>
+                                </div>
+                                <div class="progress-text">
+                                    <span id="spentAmount">$0</span> of <span id="budgetTotal">$0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Expenses Card -->
+                    <div class="metric-card expenses-card">
+                        <div class="card-header">
+                            <div class="card-icon">📊</div>
+                            <h3 class="card-title">Total Expenses</h3>
+                        </div>
+                        <div class="card-content">
+                            <div class="metric-value" id="totalExpenses">$0</div>
+                            <div class="metric-period">This Month</div>
+                        </div>
+                    </div>
+
+                    <!-- Balance Card -->
+                    <div class="metric-card balance-card">
+                        <div class="card-header">
+                            <div class="card-icon">⚖️</div>
+                            <h3 class="card-title">Remaining Balance</h3>
+                        </div>
+                        <div class="card-content">
+                            <div class="metric-value" id="remainingBalance">$0</div>
+                            <div class="balance-status" id="balanceStatus">Set your budget</div>
+                        </div>
+                    </div>
+
+                    <!-- Savings Card -->
+                    <div class="metric-card savings-card">
+                        <div class="card-header">
+                            <div class="card-icon">🎯</div>
+                            <h3 class="card-title">Savings Goal</h3>
+                        </div>
+                        <div class="card-content">
+                            <div class="metric-value" id="savingsAmount">$0</div>
+                            <div class="metric-period">Monthly Target</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Charts Section -->
+            <section class="charts-section">
+                <div class="charts-grid">
+                    <!-- Category Breakdown Chart -->
+                    <div class="chart-card">
+                        <div class="card-header">
+                            <h3 class="card-title">Spending by Category</h3>
+                            <div class="card-actions">
+                                <button class="btn btn-sm btn-outline" id="addCategoryBtn">Add Category</button>
+                            </div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="pieChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Monthly Overview Chart -->
+                    <div class="chart-card">
+                        <div class class="card-header">
+                            <h3 class="card-title">Monthly Overview</h3>
+                            <div class="card-actions">
+                                <select class="chart-period-select" id="chartPeriod">
+                                    <option value="3">Last 3 Months</option>
+                                    <option value="6">Last 6 Months</option>
+                                    <option value="12">Last 12 Months</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="barChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Add Expense Section -->
+            <section class="add-expense-section">
+                <div class="section-header">
+                    <h3 class="section-title">Add New Expense</h3>
+                    <p class="section-subtitle">Track your spending to stay on budget</p>
+                </div>
+                <form class="expense-form" id="expenseForm">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="expenseAmount" class="form-label">Amount ($)</label>
+                            <div class="input-wrapper">
+                                <span class="input-prefix">$</span>
+                                <input type="number" id="expenseAmount" class="form-input" required min="0" step="0.01" placeholder="0.00">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="expenseCategory" class="form-label">Category</label>
+                            <select id="expenseCategory" class="form-select" required>
+                                <option value="">Select Category</option>
+                                <option value="Food 🍔">Food 🍔</option>
+                                <option value="Travel ✈️">Travel ✈️</option>
+                                <option value="Shopping 🛍️">Shopping 🛍️</option>
+                                <option value="Bills 💡">Bills 💡</option>
+                                <option value="Entertainment 🎬">Entertainment 🎬</option>
+                                <option value="Transportation 🚗">Transportation 🚗</option>
+                                <option value="Healthcare 🏥">Healthcare 🏥</option>
+                                <option value="Education 📚">Education 📚</option>
+                                <option value="Other ➕">Other ➕</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="expenseDate" class="form-label">Date</label>
+                            <input type="date" id="expenseDate" class="form-input" required>
+                        </div>
+                        <div class="form-group full-width">
+                            <label for="expenseDescription" class="form-label">Description (Optional)</label>
+                            <input type="text" id="expenseDescription" class="form-input" placeholder="What was this expense for?">
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">
+                            <span class="btn-icon">➕</span>
+                            Add Expense
+                        </button>
+                        <button type="button" class="btn btn-secondary" id="clearFormBtn">
+                            <span class="btn-icon">🗑️</span>
+                            Clear Form
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Recent Expenses Section -->
+            <section class="expenses-section">
+                <div class="section-header">
+                    <h3 class="section-title">Recent Expenses</h3>
+                    <div class="section-actions">
+                        <button class="btn btn-outline" id="viewAllBtn">View All</button>
+                        <button class="btn btn-outline btn-danger" id="clearAllBtn">Clear All</button>
+                    </div>
+                </div>
+                <div class="expenses-list" id="expensesList">
+                    <!-- Expenses will be populated here -->
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Budget Edit Modal -->
+    <div class="modal" id="budgetModal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Set Monthly Budget</h3>
+                <button class="modal-close" id="closeBudgetModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="budgetForm">
+                    <div class="form-group">
+                        <label for="budgetInput" class="form-label">Monthly Budget Amount ($)</label>
+                        <div class="input-wrapper">
+                            <span class="input-prefix">$</span>
+                            <input type="number" id="budgetInput" class="form-input" required min="0" step="0.01" placeholder="0.00">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="savingsInput" class="form-label">Monthly Savings Goal ($)</label>
+                        <div class="input-wrapper">
+                            <span class="input-prefix">$</span>
+                            <input type="number" id="savingsInput" class="form-input" min="0" step="0.01" placeholder="0.00">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="cancelBudgetBtn">Cancel</button>
+                <button type="button" class="btn btn-primary" id="saveBudgetBtn">Save Budget</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Category Modal -->
+    <div class="modal" id="categoryModal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Add New Category</h3>
+                <button class="modal-close" id="closeCategoryModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="categoryForm">
+                    <div class="form-group">
+                        <label for="newCategoryName" class="form-label">Category Name</label>
+                        <input type="text" id="newCategoryName" class="form-input" required placeholder="e.g., Coffee">
+                    </div>
+                    <div class="form-group">
+                        <label for="newCategoryEmoji" class="form-label">Emoji</label>
+                        <input type="text" id="newCategoryEmoji" class="form-input" required placeholder="☕" maxlength="2">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="cancelCategoryBtn">Cancel</button>
+                <button type="button" class="btn btn-primary" id="saveCategoryBtn">Add Category</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal" id="deleteModal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Confirm Deletion</h3>
+                <button class="modal-close" id="closeDeleteModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this expense? This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="cancelDeleteBtn">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile Modal -->
+    <div class="modal" id="profileModal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">User Profile</h3>
+                <button class="modal-close" id="closeProfileModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="profileForm">
+                    <div class="form-group">
+                        <label for="profileName" class="form-label">Full Name</label>
+                        <input type="text" id="profileName" class="form-input" required placeholder="Enter your full name">
+                    </div>
+                    <div class="form-group">
+                        <label for="profileEmail" class="form-label">Email</label>
+                        <input type="email" id="profileEmail" class="form-input" readonly>
+                        <small class="form-help">Email cannot be changed</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="profilePassword" class="form-label">New Password (optional)</label>
+                        <input type="password" id="profilePassword" class="form-input" minlength="6" placeholder="Leave blank to keep current password">
+                    </div>
+                    <div class="form-group">
+                        <label for="profileConfirmPassword" class="form-label">Confirm New Password</label>
+                        <input type="password" id="profileConfirmPassword" class="form-input" minlength="6" placeholder="Confirm new password">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="cancelProfileBtn">Cancel</button>
+                <button type="button" class="btn btn-primary" id="saveProfileBtn">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import/Export Modal -->
+    <div class="modal" id="dataModal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="dataModalTitle">Export/Import Data</h3>
+                <button class="modal-close" id="closeDataModal">&times;</button>
+            </div>
+            <div class="modal-body" id="dataModalBody">
+                <!-- Content will be populated based on action -->
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
