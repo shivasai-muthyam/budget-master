@@ -1,129 +1,78 @@
-# BudgetMaster - Expense Tracker
+# 💸 BudgetMaster – Expense Tracker  
 
-A modern, responsive expense tracking and budget management application built with HTML, CSS, JavaScript, and Supabase.
+A modern, responsive expense tracking and budget management application to help you stay on top of your finances with ease.  
 
-## Features
+🌐 **Live Site**  
+👉 [Try BudgetMaster Now](budget-master-omega.vercel.app)  
 
-- 🔐 User authentication (login/signup)
-- 💰 Expense tracking with categories
-- 📊 Interactive charts and analytics
-- 🎯 Budget management and goals
-- 🌙 Dark/Light theme toggle
-- 📱 Responsive design
-- 💾 Data export/import functionality
+---
 
-## Tech Stack
+## 🚀 Features  
 
-- **Frontend**: HTML5, CSS3, JavaScript (ES6+)
-- **Charts**: Chart.js
-- **Backend**: Supabase (PostgreSQL + Auth)
-- **Deployment**: Vercel
+- 🔐 **User Authentication** – Secure login & signup with Supabase  
+- 💰 **Expense Tracking** – Add, edit, and categorize expenses  
+- 🎯 **Budget Management** – Create monthly budgets with progress bars  
+- 📊 **Charts & Analytics** – Visualize spending with interactive charts  
+- 😀 **Emoji Support** – Personalize budgets with emoji icons  
+- 📅 **Monthly Reports** – Compare budget vs expenses month by month  
+- 🌙 **Dark/Light Mode** – Toggle themes for better experience  
+- 📱 **Responsive Design** – Works seamlessly across devices  
 
-## Deployment to Vercel
+---
 
-### Prerequisites
+## 💻 Tech Stack  
 
-1. Make sure you have a [Vercel account](https://vercel.com)
-2. Install Vercel CLI (optional):
-   ```bash
-   npm i -g vercel
-   ```
+**Languages**  
+- JavaScript (ES6+), HTML5, CSS3  
 
-### Deployment Steps
+**Libraries & Tools**  
+- Chart.js (interactive graphs)  
+- Supabase (PostgreSQL + Auth)  
+- Tailwind CSS (modern UI styling)  
 
-#### Method 1: Using Vercel Dashboard (Recommended)
+**Deployment**  
+- Vercel (Frontend Hosting)  
+- Supabase (Backend & Database)  
 
-1. **Push your code to GitHub**:
-   ```bash
-   git init
-   git add .
-   git commit -m "Initial commit"
-   git branch -M main
-   git remote add origin https://github.com/yourusername/budgetmaster.git
-   git push -u origin main
-   ```
+---
 
-2. **Deploy via Vercel Dashboard**:
-   - Go to [vercel.com](https://vercel.com)
-   - Click "New Project"
-   - Import your GitHub repository
-   - Vercel will automatically detect it's a static site
-   - Click "Deploy"
+## 📂 App Sections  
 
-#### Method 2: Using Vercel CLI
+- **Login/Signup** – Secure access to your account  
+- **Dashboard** – Overview of budgets, expenses, and charts  
+- **Budgets** – Create & manage multiple budgets with real-time tracking  
+- **Expenses** – Add, edit, and delete expenses instantly  
+- **Analytics** – Monthly comparisons and stacked bar charts  
 
-1. **Install Vercel CLI**:
-   ```bash
-   npm i -g vercel
-   ```
+---
 
-2. **Deploy from your project directory**:
-   ```bash
-   vercel
-   ```
+## 📊 Database Structure  
 
-3. **Follow the prompts**:
-   - Link to existing project or create new
-   - Set project name
-   - Confirm deployment settings
+- **users** → User profiles  
+- **budgets** → Budget data for each user  
+- **expenses** → Expense records linked to budgets  
+- **categories** → Categories for expense organization  
 
-### Environment Variables
+---
 
-Make sure your Supabase configuration is correct in the JavaScript files:
+## 📈 Highlights  
 
-```javascript
-const SUPABASE_URL = 'your-supabase-url';
-const SUPABASE_ANON_KEY = 'your-supabase-anon-key';
-```
+- Real-time database updates with Supabase  
+- Smooth animations & instant feedback (toasts, dialogs)  
+- Optimized for speed & accessibility  
+- Mobile-first, modern UI/UX  
 
-### Custom Domain (Optional)
+---
 
-1. Go to your Vercel project dashboard
-2. Navigate to "Settings" → "Domains"
-3. Add your custom domain
-4. Follow the DNS configuration instructions
+## 🔧 Deployment  
 
-## Local Development
+This project is live on **Vercel** with Supabase backend.  
+You can fork the repository and redeploy on:  
 
-```bash
-# Start local development server
-python3 -m http.server 8000
+- [Vercel](https://vercel.com) (Recommended)  
+- Netlify  
+- GitHub Pages  
 
-# Or using npm
-npm run dev
-```
+---
 
-Then open `http://localhost:8000` in your browser.
-
-## Project Structure
-
-```
-budgetmaster/
-├── index.html          # Main dashboard page
-├── login.html          # Login/signup page
-├── script.js           # Main JavaScript logic
-├── styles.css          # Styles and themes
-├── vercel.json         # Vercel configuration
-├── package.json        # Project metadata
-└── README.md          # This file
-```
-
-## Database Setup
-
-Make sure your Supabase database has the following tables:
-
-- `users` - User profiles
-- `expenses` - Expense records
-- `categories` - Expense categories
-- `budgets` - User budgets
-
-## Support
-
-For issues or questions:
-1. Check the [Supabase documentation](https://supabase.com/docs)
-2. Review the [Vercel documentation](https://vercel.com/docs)
-3. Open an issue in this repository
-
-## License
-
-MIT License - feel free to use this project for personal or commercial purposes.
+📜 **License**: MIT – Free for personal or commercial use.  
