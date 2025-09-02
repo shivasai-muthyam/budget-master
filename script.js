@@ -512,7 +512,7 @@ class FinanceDashboard {
                     ${expense.description ? `<div class="expense-description">${expense.description}</div>` : ''}
                     <div class="expense-date">${this.formatDate(expense.date)}</div>
                 </div>
-                <div class="expense-amount">-$${expense.amount.toFixed(2)}</div>
+                <div class="expense-amount">-₹${expense.amount.toFixed(2)}</div>
                 <div class="expense-actions">
                     <button class="action-btn edit-expense-btn" onclick="dashboard.editExpense(${expense.id})" aria-label="Edit expense">
                         ✏️
@@ -609,10 +609,10 @@ class FinanceDashboard {
         const spentPercentage = this.monthlyBudget > 0 ? (totalExpenses / this.monthlyBudget) * 100 : 0;
 
         // Update budget display
-        document.getElementById('budgetAmount').textContent = `$${this.monthlyBudget.toFixed(2)}`;
-        document.getElementById('totalExpenses').textContent = `$${totalExpenses.toFixed(2)}`;
-        document.getElementById('remainingBalance').textContent = `$${remainingBalance.toFixed(2)}`;
-        document.getElementById('savingsAmount').textContent = `$${this.monthlySavings.toFixed(2)}`;
+        document.getElementById('budgetAmount').textContent = `₹${this.monthlyBudget.toFixed(2)}`;
+        document.getElementById('totalExpenses').textContent = `₹${totalExpenses.toFixed(2)}`;
+        document.getElementById('remainingBalance').textContent = `₹${remainingBalance.toFixed(2)}`;
+        document.getElementById('savingsAmount').textContent = `₹${this.monthlySavings.toFixed(2)}`;
 
         // Update progress bar
         const progressBar = document.getElementById('budgetProgress');
@@ -620,8 +620,8 @@ class FinanceDashboard {
         const budgetTotal = document.getElementById('budgetTotal');
         
         progressBar.style.width = `${Math.min(spentPercentage, 100)}%`;
-        spentAmount.textContent = `$${totalExpenses.toFixed(2)}`;
-        budgetTotal.textContent = `$${this.monthlyBudget.toFixed(2)}`;
+        spentAmount.textContent = `₹${totalExpenses.toFixed(2)}`;
+        budgetTotal.textContent = `₹${this.monthlyBudget.toFixed(2)}`;
 
         // Update balance status with color coding
         const balanceStatus = document.getElementById('balanceStatus');
@@ -697,7 +697,7 @@ class FinanceDashboard {
                                 const value = context.parsed;
                                 const total = context.dataset.data.reduce((a, b) => a + b, 0);
                                 const percentage = ((value / total) * 100).toFixed(1);
-                                return `${label}: $${value.toFixed(2)} (${percentage}%)`;
+                                return `${label}: ₹${value.toFixed(2)} (${percentage}%)`;
                             }
                         }
                     }
@@ -745,7 +745,7 @@ class FinanceDashboard {
                         ticks: {
                             color: 'var(--text-secondary)',
                             callback: function(value) {
-                                return '$' + value.toLocaleString();
+                                return '₹' + value.toLocaleString();
                             }
                         }
                     },
