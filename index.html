@@ -329,6 +329,48 @@
         </div>
     </div>
 
+    <!-- View All Expenses Modal -->
+    <div class="modal" id="viewAllExpensesModal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h3 class="modal-title">All Expenses</h3>
+                <div class="modal-actions">
+                    <div class="filter-controls">
+                        <select id="monthFilter" class="form-select">
+                            <option value="">All Months</option>
+                            <option value="current">Current Month</option>
+                            <option value="last3">Last 3 Months</option>
+                            <option value="last6">Last 6 Months</option>
+                        </select>
+                        <select id="categoryFilter" class="form-select">
+                            <option value="">All Categories</option>
+                        </select>
+                    </div>
+                    <button class="modal-close" id="closeViewAllModal">&times;</button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="expenses-summary">
+                    <div class="summary-item">
+                        <span class="summary-label">Total Expenses:</span>
+                        <span class="summary-value" id="totalExpensesSummary">₹0</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Total Count:</span>
+                        <span class="summary-value" id="totalExpensesCount">0</span>
+                    </div>
+                </div>
+                <div class="all-expenses-list" id="allExpensesList">
+                    <!-- All expenses will be populated here -->
+                </div>
+                <div class="pagination" id="pagination">
+                    <!-- Pagination controls will be added here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Import/Export Modal -->
     <div class="modal" id="dataModal">
         <div class="modal-overlay"></div>

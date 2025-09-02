@@ -1269,6 +1269,214 @@ select:focus {
 
 
 
+/* Modal Large for View All Expenses */
+.modal-large {
+    max-width: 90vw;
+    max-height: 90vh;
+    width: 1200px;
+}
+
+.modal-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+.filter-controls {
+    display: flex;
+    gap: var(--spacing-sm);
+}
+
+.filter-controls .form-select {
+    min-width: 150px;
+    font-size: 0.875rem;
+}
+
+.expenses-summary {
+    display: flex;
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-lg);
+    padding: var(--spacing-md);
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+}
+
+.summary-item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+}
+
+.summary-label {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.summary-value {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.all-expenses-list {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-secondary);
+}
+
+.expense-item-detailed {
+    display: flex;
+    align-items: center;
+    padding: var(--spacing-md);
+    border-bottom: 1px solid var(--border-light);
+    transition: background-color var(--transition-fast);
+}
+
+.expense-item-detailed:hover {
+    background: var(--bg-tertiary);
+}
+
+.expense-item-detailed:last-child {
+    border-bottom: none;
+}
+
+.expense-icon-detailed {
+    font-size: 1.5rem;
+    margin-right: var(--spacing-md);
+    min-width: 40px;
+    text-align: center;
+}
+
+.expense-details-detailed {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+}
+
+.expense-category-detailed {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 1rem;
+}
+
+.expense-description-detailed {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+.expense-date-detailed {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+}
+
+.expense-amount-detailed {
+    font-weight: 600;
+    color: var(--danger);
+    font-size: 1.125rem;
+    margin-left: var(--spacing-md);
+}
+
+.expense-actions-detailed {
+    display: flex;
+    gap: var(--spacing-xs);
+    margin-left: var(--spacing-md);
+}
+
+.action-btn-detailed {
+    background: none;
+    border: none;
+    padding: var(--spacing-xs);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background-color var(--transition-fast);
+    font-size: 1rem;
+}
+
+.action-btn-detailed:hover {
+    background: var(--bg-tertiary);
+}
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-lg);
+    padding: var(--spacing-md);
+}
+
+.pagination-btn {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    font-size: 0.875rem;
+}
+
+.pagination-btn:hover {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+.pagination-btn.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+.pagination-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.pagination-info {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin: 0 var(--spacing-md);
+}
+
+/* Responsive adjustments for large modal */
+@media (max-width: 768px) {
+    .modal-large {
+        max-width: 95vw;
+        width: 95vw;
+    }
+    
+    .filter-controls {
+        flex-direction: column;
+        gap: var(--spacing-xs);
+    }
+    
+    .filter-controls .form-select {
+        min-width: auto;
+    }
+    
+    .expenses-summary {
+        flex-direction: column;
+        gap: var(--spacing-sm);
+    }
+    
+    .expense-item-detailed {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-sm);
+    }
+    
+    .expense-amount-detailed,
+    .expense-actions-detailed {
+        margin-left: 0;
+        align-self: flex-end;
+    }
+}
+
 /* Responsive adjustments for login */
 @media (max-width: 480px) {
     .login-card {

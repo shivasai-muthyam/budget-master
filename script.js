@@ -17,6 +17,10 @@ class FinanceDashboard {
         this.currentTheme = 'light';
         this.deleteExpenseId = null;
         this.currentUser = null;
+        this.allExpenses = [];
+        this.filteredExpenses = [];
+        this.currentPage = 1;
+        this.itemsPerPage = 20;
         
         this.init();
     }
@@ -75,6 +79,11 @@ class FinanceDashboard {
         document.getElementById('saveCategoryBtn').addEventListener('click', () => this.saveCategory());
         document.getElementById('cancelCategoryBtn').addEventListener('click', () => this.hideCategoryModal());
         document.getElementById('closeCategoryModal').addEventListener('click', () => this.hideCategoryModal());
+
+        // View all expenses modal
+        document.getElementById('closeViewAllModal').addEventListener('click', () => this.hideViewAllModal());
+        document.getElementById('monthFilter').addEventListener('change', () => this.filterExpenses());
+        document.getElementById('categoryFilter').addEventListener('change', () => this.filterExpenses());
 
         // Data management
         document.getElementById('exportBtn').addEventListener('click', () => this.exportData());
@@ -1007,8 +1016,233 @@ class FinanceDashboard {
     }
 
     viewAllExpenses() {
-        // For now, just show a notification. In a real app, this could open a detailed view
-        this.showNotification('View all expenses feature coming soon!', 'info');
+        this.showViewAllModal();
+        this.loadAllExpenses();
+        this.populateCategoryFilter();
+    }
+
+    showViewAllModal() {
+        document.getElementById('viewAllExpensesModal').classList.add('active');
+    }
+
+    hideViewAllModal() {
+        document.getElementById('viewAllExpensesModal').classList.remove('active');
+    }
+
+    async loadAllExpenses() {
+        try {
+            // Load all expenses from Supabase (not just current month)
+            const { data: expenses, error: expensesError } = await supabase
+                .from('expenses')
+                .select(`
+                    id,
+                    amount,
+                    description,
+                    date,
+                    created_at,
+                    categories!inner(category_name)
+                `)
+                .eq('user_id', this.currentUser.id)
+                .order('date', { ascending: false });
+
+            if (expensesError) {
+                console.error('Error loading all expenses:', expensesError);
+                this.showNotification('Failed to load expenses. Please try again.', 'error');
+                return;
+            }
+
+            this.allExpenses = expenses.map(exp => ({
+                id: exp.id,
+                amount: exp.amount,
+                category: exp.categories.category_name,
+                date: exp.date,
+                description: exp.description,
+                timestamp: exp.created_at
+            }));
+
+            this.filteredExpenses = [...this.allExpenses];
+            this.currentPage = 1;
+            this.itemsPerPage = 20;
+            this.renderAllExpenses();
+            this.updateExpensesSummary();
+
+        } catch (error) {
+            console.error('Error loading all expenses:', error);
+            this.showNotification('Failed to load expenses. Please try again.', 'error');
+        }
+    }
+
+    populateCategoryFilter() {
+        const categoryFilter = document.getElementById('categoryFilter');
+        const uniqueCategories = [...new Set(this.allExpenses.map(exp => exp.category))];
+        
+        categoryFilter.innerHTML = '<option value="">All Categories</option>';
+        uniqueCategories.forEach(category => {
+            const option = document.createElement('option');
+            option.value = category;
+            option.textContent = category;
+            categoryFilter.appendChild(option);
+        });
+    }
+
+    filterExpenses() {
+        const monthFilter = document.getElementById('monthFilter').value;
+        const categoryFilter = document.getElementById('categoryFilter').value;
+
+        this.filteredExpenses = this.allExpenses.filter(expense => {
+            let includeExpense = true;
+
+            // Apply month filter
+            if (monthFilter) {
+                const expenseDate = new Date(expense.date);
+                const currentDate = new Date();
+                
+                switch (monthFilter) {
+                    case 'current':
+                        includeExpense = expenseDate.getMonth() === currentDate.getMonth() && 
+                                        expenseDate.getFullYear() === currentDate.getFullYear();
+                        break;
+                    case 'last3':
+                        const threeMonthsAgo = new Date(currentDate.getFullYear(), currentDate.getMonth() - 3, 1);
+                        includeExpense = expenseDate >= threeMonthsAgo;
+                        break;
+                    case 'last6':
+                        const sixMonthsAgo = new Date(currentDate.getFullYear(), currentDate.getMonth() - 6, 1);
+                        includeExpense = expenseDate >= sixMonthsAgo;
+                        break;
+                }
+            }
+
+            // Apply category filter
+            if (categoryFilter && includeExpense) {
+                includeExpense = expense.category === categoryFilter;
+            }
+
+            return includeExpense;
+        });
+
+        this.currentPage = 1;
+        this.renderAllExpenses();
+        this.updateExpensesSummary();
+    }
+
+    renderAllExpenses() {
+        const allExpensesList = document.getElementById('allExpensesList');
+        const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+        const endIndex = startIndex + this.itemsPerPage;
+        const currentPageExpenses = this.filteredExpenses.slice(startIndex, endIndex);
+
+        if (this.filteredExpenses.length === 0) {
+            allExpensesList.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">💰</div>
+                    <h3>No expenses found</h3>
+                    <p>Try adjusting your filters or add some expenses!</p>
+                </div>
+            `;
+            return;
+        }
+
+        allExpensesList.innerHTML = currentPageExpenses.map(expense => `
+            <div class="expense-item-detailed" data-id="${expense.id}">
+                <div class="expense-icon-detailed">${this.getCategoryEmoji(expense.category)}</div>
+                <div class="expense-details-detailed">
+                    <div class="expense-category-detailed">${expense.category}</div>
+                    ${expense.description ? `<div class="expense-description-detailed">${expense.description}</div>` : ''}
+                    <div class="expense-date-detailed">${this.formatDate(expense.date)}</div>
+                </div>
+                <div class="expense-amount-detailed">-₹${expense.amount.toFixed(2)}</div>
+                <div class="expense-actions-detailed">
+                    <button class="action-btn-detailed edit-expense-btn-detailed" onclick="dashboard.editExpenseFromModal(${expense.id})" aria-label="Edit expense">
+                        ✏️
+                    </button>
+                    <button class="action-btn-detailed delete-expense-btn-detailed" onclick="dashboard.deleteExpenseFromModal(${expense.id})" aria-label="Delete expense">
+                        🗑️
+                    </button>
+                </div>
+            </div>
+        `).join('');
+
+        this.renderPagination();
+    }
+
+    renderPagination() {
+        const pagination = document.getElementById('pagination');
+        const totalPages = Math.ceil(this.filteredExpenses.length / this.itemsPerPage);
+        
+        if (totalPages <= 1) {
+            pagination.innerHTML = '';
+            return;
+        }
+
+        let paginationHTML = '';
+        
+        // Previous button
+        paginationHTML += `
+            <button class="pagination-btn" ${this.currentPage === 1 ? 'disabled' : ''} onclick="dashboard.changePage(${this.currentPage - 1})">
+                ← Previous
+            </button>
+        `;
+
+        // Page numbers
+        const startPage = Math.max(1, this.currentPage - 2);
+        const endPage = Math.min(totalPages, this.currentPage + 2);
+
+        for (let i = startPage; i <= endPage; i++) {
+            paginationHTML += `
+                <button class="pagination-btn ${i === this.currentPage ? 'active' : ''}" onclick="dashboard.changePage(${i})">
+                    ${i}
+                </button>
+            `;
+        }
+
+        // Next button
+        paginationHTML += `
+            <button class="pagination-btn" ${this.currentPage === totalPages ? 'disabled' : ''} onclick="dashboard.changePage(${this.currentPage + 1})">
+                Next →
+            </button>
+        `;
+
+        // Page info
+        const startItem = (this.currentPage - 1) * this.itemsPerPage + 1;
+        const endItem = Math.min(this.currentPage * this.itemsPerPage, this.filteredExpenses.length);
+        
+        paginationHTML += `
+            <div class="pagination-info">
+                Showing ${startItem}-${endItem} of ${this.filteredExpenses.length} expenses
+            </div>
+        `;
+
+        pagination.innerHTML = paginationHTML;
+    }
+
+    changePage(page) {
+        this.currentPage = page;
+        this.renderAllExpenses();
+    }
+
+    updateExpensesSummary() {
+        const totalAmount = this.filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+        const totalCount = this.filteredExpenses.length;
+
+        document.getElementById('totalExpensesSummary').textContent = `₹${totalAmount.toFixed(2)}`;
+        document.getElementById('totalExpensesCount').textContent = totalCount;
+    }
+
+    editExpenseFromModal(id) {
+        this.hideViewAllModal();
+        this.editExpense(id);
+    }
+
+    async deleteExpenseFromModal(id) {
+        try {
+            await this.deleteExpense(id, false);
+            this.loadAllExpenses(); // Reload the list
+            this.showNotification('Expense deleted successfully!', 'success');
+        } catch (error) {
+            console.error('Error deleting expense from modal:', error);
+            this.showNotification('Failed to delete expense. Please try again.', 'error');
+        }
     }
 
     hideAllModals() {
