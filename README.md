@@ -3,7 +3,7 @@
 A modern, responsive expense tracking and budget management application to help you stay on top of your finances with ease.  
 
 🌐 **Live Site**  
-👉 [Try BudgetMaster Now](budget-master-omega.vercel.app)  
+👉 [Try BudgetMaster Now](https://budget-master-omega.vercel.app/login)  
 
 ---
 
