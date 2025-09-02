@@ -5,110 +5,298 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BudgetMaster - Debug</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .debug-section { margin: 20px 0; padding: 20px; border: 1px solid #ccc; }
+        .debug-output { background: #f5f5f5; padding: 10px; margin: 10px 0; }
+        button { margin: 5px; padding: 10px; }
+        input, select { margin: 5px; padding: 5px; }
+    </style>
 </head>
 <body>
     <h1>BudgetMaster Debug Page</h1>
     
-    <div id="status">Loading...</div>
+    <div class="debug-section">
+        <h3>Authentication Status</h3>
+        <div id="authStatus">Checking...</div>
+        <button onclick="checkAuth()">Check Auth</button>
+        <button onclick="logout()">Logout</button>
+    </div>
     
-    <div id="auth-status">Not authenticated</div>
+    <div class="debug-section">
+        <h3>Add Test Expense</h3>
+        <form id="testExpenseForm">
+            <input type="number" id="testAmount" placeholder="Amount" value="25.50" step="0.01">
+            <select id="testCategory">
+                <option value="Food 🍔">Food 🍔</option>
+                <option value="Shopping 🛍️">Shopping 🛍️</option>
+                <option value="Bills 💡">Bills 💡</option>
+            </select>
+            <input type="date" id="testDate" value="">
+            <input type="text" id="testDescription" placeholder="Description" value="Test expense">
+            <button type="submit">Add Test Expense</button>
+        </form>
+        <div id="testResult"></div>
+    </div>
     
-    <button onclick="testConnection()">Test Supabase Connection</button>
-    <button onclick="testAuth()">Test Authentication</button>
-    <button onclick="clearSession()">Clear Session</button>
+    <div class="debug-section">
+        <h3>Database Queries</h3>
+        <button onclick="testCategories()">Test Categories Query</button>
+        <button onclick="testExpenses()">Test Expenses Query</button>
+        <button onclick="testBudget()">Test Budget Query</button>
+        <div id="queryResults"></div>
+    </div>
     
-    <div id="logs"></div>
+    <div class="debug-section">
+        <h3>Console Log</h3>
+        <div id="consoleOutput" class="debug-output"></div>
+        <button onclick="clearConsole()">Clear Console</button>
+    </div>
 
     <script>
-        const SUPABASE_URL = 'https://siqtcjlkkwywvujeooim.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpcXRjamxra3d5d3Z1amVvb2ltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY0OTIxMjUsImV4cCI6MjA3MjA2ODEyNX0.JgzaELyTZ74ZtW45y7ZGSG3BfxM4FhRoX_kHP7q9ymA';
-
-        let supabase;
-
-        function log(message) {
-            const logs = document.getElementById('logs');
+        // Initialize Supabase
+        const supabaseUrl = 'https://siqtcjlkkwywvujeooim.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpcXRjamxra3d5d3Z1amVvb2ltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY0OTIxMjUsImV4cCI6MjA3MjA2ODEyNX0.JgzaELyTZ74ZtW45y7ZGSG3BfxM4FhRoX_kHP7q9ymA';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+        
+        let currentUser = null;
+        
+        // Set default date to today
+        document.getElementById('testDate').value = new Date().toISOString().split('T')[0];
+        
+        // Override console.log to show in debug output
+        const originalLog = console.log;
+        const originalError = console.error;
+        
+        function addToConsole(message, type = 'log') {
+            const consoleOutput = document.getElementById('consoleOutput');
             const timestamp = new Date().toLocaleTimeString();
-            logs.innerHTML += `<div>[${timestamp}] ${message}</div>`;
-            console.log(message);
+            const div = document.createElement('div');
+            div.style.color = type === 'error' ? 'red' : 'black';
+            div.textContent = `[${timestamp}] ${message}`;
+            consoleOutput.appendChild(div);
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
         }
-
-        async function initSupabase() {
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addToConsole(args.join(' '));
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addToConsole(args.join(' '), 'error');
+        };
+        
+        // Check authentication on load
+        window.addEventListener('load', async () => {
+            await checkAuth();
+        });
+        
+        async function checkAuth() {
             try {
-                log('Initializing Supabase client...');
-                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-                log('Supabase client initialized successfully');
-                
-                // Check session
-                const { data: { session }, error } = await supabase.auth.getSession();
-                if (error) {
-                    log('Error checking session: ' + error.message);
-                } else if (session) {
-                    log('User is authenticated: ' + session.user.email);
-                    document.getElementById('auth-status').textContent = 'Authenticated as: ' + session.user.email;
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session) {
+                    currentUser = session.user;
+                    document.getElementById('authStatus').innerHTML = `
+                        <strong>✅ Authenticated</strong><br>
+                        User: ${currentUser.email}<br>
+                        ID: ${currentUser.id}
+                    `;
                 } else {
-                    log('No active session found');
-                }
-                
-                document.getElementById('status').textContent = 'Ready';
-            } catch (error) {
-                log('Error initializing Supabase: ' + error.message);
-                document.getElementById('status').textContent = 'Error: ' + error.message;
-            }
-        }
-
-        async function testConnection() {
-            try {
-                log('Testing Supabase connection...');
-                const { data, error } = await supabase.from('users').select('count').limit(1);
-                
-                if (error) {
-                    log('Connection test failed: ' + error.message);
-                } else {
-                    log('Connection test successful');
-                }
-            } catch (error) {
-                log('Connection test error: ' + error.message);
-            }
-        }
-
-        async function testAuth() {
-            try {
-                log('Testing authentication...');
-                const { data: { session }, error } = await supabase.auth.getSession();
-                
-                if (error) {
-                    log('Auth test error: ' + error.message);
-                } else if (session) {
-                    log('Auth test: User is logged in');
-                    log('User ID: ' + session.user.id);
-                    log('User email: ' + session.user.email);
-                } else {
-                    log('Auth test: No active session');
+                    currentUser = null;
+                    document.getElementById('authStatus').innerHTML = `
+                        <strong>❌ Not Authenticated</strong><br>
+                        <a href="login.html">Go to Login</a>
+                    `;
                 }
             } catch (error) {
-                log('Auth test error: ' + error.message);
+                console.error('Auth check error:', error);
+                document.getElementById('authStatus').innerHTML = `<strong>❌ Error: ${error.message}</strong>`;
             }
         }
-
-        async function clearSession() {
+        
+        async function logout() {
             try {
-                log('Clearing session...');
-                const { error } = await supabase.auth.signOut();
-                
-                if (error) {
-                    log('Sign out error: ' + error.message);
-                } else {
-                    log('Session cleared successfully');
-                    document.getElementById('auth-status').textContent = 'Not authenticated';
-                }
+                await supabase.auth.signOut();
+                currentUser = null;
+                await checkAuth();
+                console.log('Logged out successfully');
             } catch (error) {
-                log('Clear session error: ' + error.message);
+                console.error('Logout error:', error);
             }
         }
-
-        // Initialize when page loads
-        document.addEventListener('DOMContentLoaded', initSupabase);
+        
+        // Test expense form
+        document.getElementById('testExpenseForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (!currentUser) {
+                document.getElementById('testResult').innerHTML = '<strong>❌ Please login first</strong>';
+                return;
+            }
+            
+            const amount = parseFloat(document.getElementById('testAmount').value);
+            const category = document.getElementById('testCategory').value;
+            const date = document.getElementById('testDate').value;
+            const description = document.getElementById('testDescription').value;
+            
+            try {
+                console.log('Adding test expense:', { amount, category, date, description });
+                
+                // First, get or create the category
+                let categoryId;
+                const { data: existingCategory, error: categoryError } = await supabase
+                    .from('categories')
+                    .select('id')
+                    .eq('user_id', currentUser.id)
+                    .eq('category_name', category)
+                    .single();
+                
+                if (categoryError && categoryError.code === 'PGRST116') {
+                    // Create category
+                    const { data: newCategory, error: createError } = await supabase
+                        .from('categories')
+                        .insert({
+                            user_id: currentUser.id,
+                            category_name: category,
+                            allocated_budget: 0,
+                            created_at: new Date().toISOString()
+                        })
+                        .select()
+                        .single();
+                    
+                    if (createError) throw createError;
+                    categoryId = newCategory.id;
+                    console.log('Created new category with ID:', categoryId);
+                } else if (categoryError) {
+                    throw categoryError;
+                } else {
+                    categoryId = existingCategory.id;
+                    console.log('Using existing category ID:', categoryId);
+                }
+                
+                // Now add the expense
+                const { data: expense, error: expenseError } = await supabase
+                    .from('expenses')
+                    .insert({
+                        user_id: currentUser.id,
+                        category_id: categoryId,
+                        amount: amount,
+                        description: description,
+                        date: date,
+                        created_at: new Date().toISOString()
+                    })
+                    .select()
+                    .single();
+                
+                if (expenseError) throw expenseError;
+                
+                document.getElementById('testResult').innerHTML = `
+                    <strong>✅ Expense added successfully!</strong><br>
+                    ID: ${expense.id}<br>
+                    Amount: $${expense.amount}<br>
+                    Category: ${category}<br>
+                    Date: ${expense.date}
+                `;
+                
+                console.log('Test expense added:', expense);
+                
+            } catch (error) {
+                console.error('Error adding test expense:', error);
+                document.getElementById('testResult').innerHTML = `<strong>❌ Error: ${error.message}</strong>`;
+            }
+        });
+        
+        async function testCategories() {
+            if (!currentUser) {
+                document.getElementById('queryResults').innerHTML = '<strong>❌ Please login first</strong>';
+                return;
+            }
+            
+            try {
+                const { data, error } = await supabase
+                    .from('categories')
+                    .select('*')
+                    .eq('user_id', currentUser.id);
+                
+                if (error) throw error;
+                
+                document.getElementById('queryResults').innerHTML = `
+                    <strong>Categories Query Result:</strong><br>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+                
+                console.log('Categories query result:', data);
+            } catch (error) {
+                console.error('Categories query error:', error);
+                document.getElementById('queryResults').innerHTML = `<strong>❌ Error: ${error.message}</strong>`;
+            }
+        }
+        
+        async function testExpenses() {
+            if (!currentUser) {
+                document.getElementById('queryResults').innerHTML = '<strong>❌ Please login first</strong>';
+                return;
+            }
+            
+            try {
+                const { data, error } = await supabase
+                    .from('expenses')
+                    .select(`
+                        *,
+                        categories!inner(category_name)
+                    `)
+                    .eq('user_id', currentUser.id)
+                    .order('created_at', { ascending: false });
+                
+                if (error) throw error;
+                
+                document.getElementById('queryResults').innerHTML = `
+                    <strong>Expenses Query Result:</strong><br>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+                
+                console.log('Expenses query result:', data);
+            } catch (error) {
+                console.error('Expenses query error:', error);
+                document.getElementById('queryResults').innerHTML = `<strong>❌ Error: ${error.message}</strong>`;
+            }
+        }
+        
+        async function testBudget() {
+            if (!currentUser) {
+                document.getElementById('queryResults').innerHTML = '<strong>❌ Please login first</strong>';
+                return;
+            }
+            
+            try {
+                const currentMonth = new Date().toLocaleString('default', { month: 'long' }) + ' ' + new Date().getFullYear();
+                const { data, error } = await supabase
+                    .from('budgets')
+                    .select('*')
+                    .eq('user_id', currentUser.id)
+                    .eq('month', currentMonth);
+                
+                if (error) throw error;
+                
+                document.getElementById('queryResults').innerHTML = `
+                    <strong>Budget Query Result:</strong><br>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+                
+                console.log('Budget query result:', data);
+            } catch (error) {
+                console.error('Budget query error:', error);
+                document.getElementById('queryResults').innerHTML = `<strong>❌ Error: ${error.message}</strong>`;
+            }
+        }
+        
+        function clearConsole() {
+            document.getElementById('consoleOutput').innerHTML = '';
+        }
     </script>
 </body>
 </html>
+
 

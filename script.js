@@ -39,7 +39,7 @@ class FinanceDashboard {
     }
 
     setupEventListeners() {
-        // Authentication
+        // Authentication - Logout
         const logoutBtn = document.getElementById('logoutBtn');
         if (logoutBtn) {
             logoutBtn.addEventListener('click', () => this.logout());
@@ -166,6 +166,8 @@ class FinanceDashboard {
             this.showNotification('Logout failed. Please try again.', 'error');
         }
     }
+
+
 
     setupTheme() {
         const savedTheme = localStorage.getItem('dashboardTheme') || 'light';
@@ -380,27 +382,57 @@ class FinanceDashboard {
         }
 
         try {
+            console.log('Adding expense:', { amount, category, date, description });
+            
             // Ensure user profile exists first
             await this.ensureUserProfile();
 
-            // Get category ID
-            const { data: categoryData, error: categoryError } = await supabase
+            // Get or create category
+            let categoryId;
+            const { data: existingCategory, error: categoryError } = await supabase
                 .from('categories')
                 .select('id')
                 .eq('user_id', this.currentUser.id)
                 .eq('category_name', category)
                 .single();
 
-            if (categoryError) {
-                throw new Error('Category not found');
+            if (categoryError && categoryError.code === 'PGRST116') {
+                // Category doesn't exist, create it
+                console.log('Creating new category:', category);
+                const { data: newCategory, error: createError } = await supabase
+                    .from('categories')
+                    .insert({
+                        category_name: category,
+                        allocated_budget: 0,
+                        created_at: new Date().toISOString()
+                    })
+                    .select()
+                    .single();
+
+                if (createError) {
+                    throw createError;
+                }
+                categoryId = newCategory.id;
+                console.log('New category created with ID:', categoryId);
+                
+                // Add to local categories array if not already there
+                if (!this.categories.includes(category)) {
+                    this.categories.push(category);
+                    this.updateCategorySelect();
+                }
+            } else if (categoryError) {
+                throw categoryError;
+            } else {
+                categoryId = existingCategory.id;
+                console.log('Using existing category ID:', categoryId);
             }
 
             // Save expense to Supabase
+            console.log('Saving expense to database with category_id:', categoryId);
             const { data: expense, error: expenseError } = await supabase
                 .from('expenses')
                 .insert({
-                    user_id: this.currentUser.id,
-                    category_id: categoryData.id,
+                    category_id: categoryId,
                     amount: amount,
                     description: description,
                     date: date,
@@ -412,6 +444,8 @@ class FinanceDashboard {
             if (expenseError) {
                 throw expenseError;
             }
+            
+            console.log('Expense saved successfully:', expense);
 
             // Add to local array
             const newExpense = {
@@ -423,7 +457,11 @@ class FinanceDashboard {
                 timestamp: expense.created_at
             };
 
+            console.log('Adding expense to local array:', newExpense);
             this.expenses.push(newExpense);
+            
+            console.log('Total expenses in local array:', this.expenses.length);
+            
             this.updateDashboard();
             this.renderExpensesList();
             this.updateCharts();
@@ -432,7 +470,14 @@ class FinanceDashboard {
 
         } catch (error) {
             console.error('Error adding expense:', error);
-            this.showNotification('Failed to add expense. Please try again.', 'error');
+            console.error('Error details:', {
+                message: error.message,
+                code: error.code,
+                details: error.details,
+                hint: error.hint,
+                fullError: error
+            });
+            this.showNotification(`Failed to add expense: ${error.message}`, 'error');
         }
     }
 
@@ -556,6 +601,8 @@ class FinanceDashboard {
         const monthlyExpenses = this.expenses.filter(expense => 
             expense.date.startsWith(currentMonth)
         );
+        
+        console.log('Updating dashboard with monthly expenses:', monthlyExpenses);
         
         const totalExpenses = monthlyExpenses.reduce((sum, expense) => sum + expense.amount, 0);
         const remainingBalance = this.monthlyBudget - totalExpenses;
@@ -728,17 +775,33 @@ class FinanceDashboard {
             expense.date.startsWith(currentMonth)
         );
 
-        const categoryTotals = {};
-        monthlyExpenses.forEach(expense => {
-            const category = expense.category;
-            categoryTotals[category] = (categoryTotals[category] || 0) + expense.amount;
-        });
+        console.log('Updating pie chart with expenses:', monthlyExpenses);
 
-        const labels = Object.keys(categoryTotals);
-        const data = Object.values(categoryTotals);
+        if (monthlyExpenses.length === 0) {
+            // No expenses, show empty state
+            this.charts.pie.data.labels = ['No expenses yet'];
+            this.charts.pie.data.datasets[0].data = [1];
+            this.charts.pie.data.datasets[0].backgroundColor = ['#6b7280'];
+        } else {
+            const categoryTotals = {};
+            monthlyExpenses.forEach(expense => {
+                const category = expense.category;
+                categoryTotals[category] = (categoryTotals[category] || 0) + expense.amount;
+            });
 
-        this.charts.pie.data.labels = labels;
-        this.charts.pie.data.datasets[0].data = data;
+            const labels = Object.keys(categoryTotals);
+            const data = Object.values(categoryTotals);
+
+            console.log('Category totals:', categoryTotals);
+
+            this.charts.pie.data.labels = labels;
+            this.charts.pie.data.datasets[0].data = data;
+            this.charts.pie.data.datasets[0].backgroundColor = [
+                '#10b981', '#3b82f6', '#8b5cf6', '#f59e0b',
+                '#ec4899', '#06b6d4', '#ef4444', '#84cc16', '#6b7280'
+            ];
+        }
+
         this.charts.pie.update('active');
     }
 
@@ -751,6 +814,8 @@ class FinanceDashboard {
         );
         
         const totalExpenses = monthlyExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+
+        console.log('Updating bar chart:', { budget: this.monthlyBudget, expenses: totalExpenses });
 
         this.charts.bar.data.datasets[0].data = [this.monthlyBudget, totalExpenses];
         this.charts.bar.update('active');
@@ -1060,14 +1125,18 @@ class FinanceDashboard {
                 this.monthlyBudget = budget.total_budget;
             }
 
-            // Load expenses for current month
-            const currentMonthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
-            const currentMonthEnd = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString();
+            // Load expenses for current month with proper join
+            const currentMonthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+            const currentMonthEnd = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0];
 
             const { data: expenses, error: expensesError } = await supabase
                 .from('expenses')
                 .select(`
-                    *,
+                    id,
+                    amount,
+                    description,
+                    date,
+                    created_at,
                     categories!inner(category_name)
                 `)
                 .eq('user_id', this.currentUser.id)
@@ -1086,7 +1155,14 @@ class FinanceDashboard {
                     description: exp.description,
                     timestamp: exp.created_at
                 }));
+                
+                console.log('Loaded expenses:', this.expenses);
             }
+
+            // Force refresh charts after data is loaded
+            setTimeout(() => {
+                this.updateCharts();
+            }, 100);
 
         } catch (error) {
             console.error('Error loading user data:', error);

@@ -160,6 +160,45 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON public.budgets    TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.categories TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.expenses   TO authenticated;
 
-/* Optional: pre‑populate default categories for a new user.
-   This is usually done from the client after sign‑up, but you can
-   insert static rows here if you wish. */
+-- -------------------------------------------------
+-- 9️⃣  Auto-set user_id for expenses (RLS fix)
+-- -------------------------------------------------
+CREATE OR REPLACE FUNCTION public.set_expense_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- If the client omitted user_id, set it to the current auth user
+  IF NEW.user_id IS NULL THEN
+    NEW.user_id := (SELECT auth.uid());
+  END IF;
+
+  -- Enforce that the supplied user_id matches auth.uid()
+  IF NEW.user_id <> (SELECT auth.uid()) THEN
+    RAISE EXCEPTION 'user_id does not match authenticated user';
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Attach the trigger to public.expenses
+DROP TRIGGER IF EXISTS set_user_on_expense ON public.expenses;
+CREATE TRIGGER set_user_on_expense
+    BEFORE INSERT ON public.expenses
+    FOR EACH ROW EXECUTE FUNCTION public.set_expense_user();
+
+-- -------------------------------------------------
+-- 🔟  Insert some default categories for testing
+-- -------------------------------------------------
+-- Note: These will be created per user when they sign up, but you can add some here for testing
+-- INSERT INTO public.categories (user_id, category_name, allocated_budget) VALUES 
+-- ('00000000-0000-0000-0000-000000000000', 'Food 🍔', 0),
+-- ('00000000-0000-0000-0000-000000000000', 'Shopping 🛍️', 0),
+-- ('00000000-0000-0000-0000-000000000000', 'Bills 💡', 0),
+-- ('00000000-0000-0000-0000-000000000000', 'Transportation 🚗', 0),
+-- ('00000000-0000-0000-0000-000000000000', 'Entertainment 🎬', 0);
+
+-- -------------------------------------------------
+-- ✅ Setup Complete!
+-- -------------------------------------------------
+-- Your database is now ready for the BudgetMaster application.
+-- The tables will be automatically populated when users sign up and start using the app.

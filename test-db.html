@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Connection Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ccc; }
+        .result { background: #f5f5f5; padding: 10px; margin: 10px 0; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        button { margin: 5px; padding: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Database Connection Test</h1>
+    
+    <div class="test-section">
+        <h3>1. Test Supabase Connection</h3>
+        <button onclick="testConnection()">Test Connection</button>
+        <div id="connectionResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>2. Test Authentication</h3>
+        <button onclick="testAuth()">Test Auth</button>
+        <div id="authResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>3. Test Table Access</h3>
+        <button onclick="testTableAccess()">Test Tables</button>
+        <div id="tableResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>4. Test Category Insert</h3>
+        <button onclick="testCategoryInsert()">Test Category Insert</button>
+        <div id="categoryResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>5. Test Expense Insert</h3>
+        <button onclick="testExpenseInsert()">Test Expense Insert</button>
+        <div id="expenseResult" class="result"></div>
+    </div>
+
+    <script>
+        const supabaseUrl = 'https://siqtcjlkkwywvujeooim.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpcXRjamxra3d5d3Z1amVvb2ltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY0OTIxMjUsImV4cCI6MjA3MjA2ODEyNX0.JgzaELyTZ74ZtW45y7ZGSG3BfxM4FhRoX_kHP7q9ymA';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+        
+        let currentUser = null;
+        
+        async function testConnection() {
+            const resultDiv = document.getElementById('connectionResult');
+            try {
+                resultDiv.innerHTML = 'Testing connection...';
+                
+                // Simple connection test
+                const { data, error } = await supabase.from('users').select('count').limit(1);
+                
+                if (error) {
+                    resultDiv.innerHTML = `<div class="error">❌ Connection failed: ${error.message}</div>`;
+                } else {
+                    resultDiv.innerHTML = `<div class="success">✅ Connection successful!</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+        
+        async function testAuth() {
+            const resultDiv = document.getElementById('authResult');
+            try {
+                resultDiv.innerHTML = 'Checking authentication...';
+                
+                const { data: { session }, error } = await supabase.auth.getSession();
+                
+                if (error) {
+                    resultDiv.innerHTML = `<div class="error">❌ Auth check failed: ${error.message}</div>`;
+                } else if (session) {
+                    currentUser = session.user;
+                    resultDiv.innerHTML = `
+                        <div class="success">✅ Authenticated!</div>
+                        <div>User: ${session.user.email}</div>
+                        <div>ID: ${session.user.id}</div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">❌ Not authenticated</div>
+                        <div>Please <a href="login.html">login first</a></div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+        
+        async function testTableAccess() {
+            const resultDiv = document.getElementById('tableResult');
+            if (!currentUser) {
+                resultDiv.innerHTML = '<div class="error">❌ Please authenticate first</div>';
+                return;
+            }
+            
+            try {
+                resultDiv.innerHTML = 'Testing table access...';
+                
+                // Test users table
+                const { data: users, error: usersError } = await supabase
+                    .from('users')
+                    .select('*')
+                    .eq('id', currentUser.id)
+                    .limit(1);
+                
+                if (usersError) {
+                    resultDiv.innerHTML = `<div class="error">❌ Users table access failed: ${usersError.message}</div>`;
+                    return;
+                }
+                
+                // Test categories table
+                const { data: categories, error: categoriesError } = await supabase
+                    .from('categories')
+                    .select('*')
+                    .eq('user_id', currentUser.id)
+                    .limit(1);
+                
+                if (categoriesError) {
+                    resultDiv.innerHTML = `<div class="error">❌ Categories table access failed: ${categoriesError.message}</div>`;
+                    return;
+                }
+                
+                // Test expenses table
+                const { data: expenses, error: expensesError } = await supabase
+                    .from('expenses')
+                    .select('*')
+                    .eq('user_id', currentUser.id)
+                    .limit(1);
+                
+                if (expensesError) {
+                    resultDiv.innerHTML = `<div class="error">❌ Expenses table access failed: ${expensesError.message}</div>`;
+                    return;
+                }
+                
+                resultDiv.innerHTML = `
+                    <div class="success">✅ All table access successful!</div>
+                    <div>Users: ${users.length} records</div>
+                    <div>Categories: ${categories.length} records</div>
+                    <div>Expenses: ${expenses.length} records</div>
+                `;
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+        
+        async function testCategoryInsert() {
+            const resultDiv = document.getElementById('categoryResult');
+            if (!currentUser) {
+                resultDiv.innerHTML = '<div class="error">❌ Please authenticate first</div>';
+                return;
+            }
+            
+            try {
+                resultDiv.innerHTML = 'Testing category insert...';
+                
+                const testCategory = `Test Category ${Date.now()}`;
+                
+                const { data: category, error } = await supabase
+                    .from('categories')
+                    .insert({
+                        user_id: currentUser.id,
+                        category_name: testCategory,
+                        allocated_budget: 0,
+                        created_at: new Date().toISOString()
+                    })
+                    .select()
+                    .single();
+                
+                if (error) {
+                    resultDiv.innerHTML = `<div class="error">❌ Category insert failed: ${error.message}</div>`;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="success">✅ Category inserted successfully!</div>
+                        <div>ID: ${category.id}</div>
+                        <div>Name: ${category.category_name}</div>
+                    `;
+                }
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+        
+        async function testExpenseInsert() {
+            const resultDiv = document.getElementById('expenseResult');
+            if (!currentUser) {
+                resultDiv.innerHTML = '<div class="error">❌ Please authenticate first</div>';
+                return;
+            }
+            
+            try {
+                resultDiv.innerHTML = 'Testing expense insert...';
+                
+                // First, get or create a category
+                let categoryId;
+                const { data: existingCategory, error: categoryError } = await supabase
+                    .from('categories')
+                    .select('id')
+                    .eq('user_id', currentUser.id)
+                    .limit(1)
+                    .single();
+                
+                if (categoryError) {
+                    // Create a test category
+                    const { data: newCategory, error: createError } = await supabase
+                        .from('categories')
+                        .insert({
+                            user_id: currentUser.id,
+                            category_name: `Test Category ${Date.now()}`,
+                            allocated_budget: 0,
+                            created_at: new Date().toISOString()
+                        })
+                        .select()
+                        .single();
+                    
+                    if (createError) throw createError;
+                    categoryId = newCategory.id;
+                } else {
+                    categoryId = existingCategory.id;
+                }
+                
+                // Now insert the expense
+                const { data: expense, error } = await supabase
+                    .from('expenses')
+                    .insert({
+                        user_id: currentUser.id,
+                        category_id: categoryId,
+                        amount: 25.50,
+                        description: 'Test expense',
+                        date: new Date().toISOString().split('T')[0],
+                        created_at: new Date().toISOString()
+                    })
+                    .select()
+                    .single();
+                
+                if (error) {
+                    resultDiv.innerHTML = `<div class="error">❌ Expense insert failed: ${error.message}</div>`;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="success">✅ Expense inserted successfully!</div>
+                        <div>ID: ${expense.id}</div>
+                        <div>Amount: $${expense.amount}</div>
+                        <div>Category ID: ${expense.category_id}</div>
+                    `;
+                }
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+        
+        // Auto-test connection on load
+        window.addEventListener('load', testConnection);
+    </script>
+</body>
+</html>

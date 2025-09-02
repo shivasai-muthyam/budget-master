@@ -1,0 +1,22 @@
+{
+  "name": "budgetmaster-expense-tracker",
+  "version": "1.0.0",
+  "description": "A modern expense tracking and budget management application",
+  "main": "index.html",
+  "scripts": {
+    "dev": "python3 -m http.server 8000",
+    "start": "python3 -m http.server 8000"
+  },
+  "keywords": [
+    "expense-tracker",
+    "budget",
+    "finance",
+    "dashboard",
+    "supabase"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

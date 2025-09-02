@@ -1267,11 +1267,14 @@ select:focus {
     font-style: italic;
 }
 
+
+
 /* Responsive adjustments for login */
 @media (max-width: 480px) {
     .login-card {
         padding: var(--spacing-lg);
         margin: var(--spacing-sm);
+        max-width: calc(100% - 2rem);
     }
     
     .login-header .brand-name {
