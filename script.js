@@ -29,7 +29,7 @@ class FinanceDashboard {
         // Check authentication first
         await this.checkAuth();
         if (!this.currentUser) {
-            window.location.href = 'login.html';
+            window.location.href = '/login';
             return;
         }
         
@@ -168,7 +168,7 @@ class FinanceDashboard {
             console.log('🔄 Redirecting to login page...');
             
             // Redirect to login page
-            window.location.href = 'login.html';
+            window.location.href = '/login';
             
         } catch (error) {
             console.error('❌ Logout error:', error);
