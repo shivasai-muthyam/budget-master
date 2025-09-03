@@ -29,8 +29,14 @@ class FinanceDashboard {
         // Check authentication first
         await this.checkAuth();
         if (!this.currentUser) {
-            window.location.href = '/login';
-            return;
+            // Check if user is in guest mode
+            const guestMode = localStorage.getItem('guestMode');
+            if (guestMode === 'true') {
+                this.setupGuestMode();
+            } else {
+                window.location.href = '/login';
+                return;
+            }
         }
         
         this.setupEventListeners();
@@ -99,6 +105,25 @@ class FinanceDashboard {
         // Chart period selector
         document.getElementById('chartPeriod').addEventListener('change', () => this.updateCharts());
 
+        // Guest banner functionality
+        const guestBanner = document.getElementById('guestBanner');
+        const closeGuestBanner = document.getElementById('closeGuestBanner');
+        const createAccountLink = document.getElementById('createAccountLink');
+
+        if (closeGuestBanner) {
+            closeGuestBanner.addEventListener('click', () => {
+                guestBanner.style.display = 'none';
+            });
+        }
+
+        if (createAccountLink) {
+            createAccountLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                // Redirect to login page to create account
+                window.location.href = '/login';
+            });
+        }
+
         // Modal close events
         document.addEventListener('click', (e) => {
             if (e.target.classList.contains('modal-overlay')) {
@@ -131,12 +156,51 @@ class FinanceDashboard {
         }
     }
 
+    setupGuestMode() {
+        // Set up guest user from localStorage
+        const guestUserData = localStorage.getItem('guestUser');
+        if (guestUserData) {
+            this.currentUser = JSON.parse(guestUserData);
+            this.isGuestMode = true;
+            this.updateUserDisplay();
+            this.showGuestBanner();
+            console.log('Guest mode activated for user:', this.currentUser.name);
+        } else {
+            // Create new guest user if none exists
+            this.currentUser = {
+                id: 'guest_' + Date.now(),
+                name: 'Guest User',
+                email: 'guest@example.com',
+                isGuest: true
+            };
+            localStorage.setItem('guestUser', JSON.stringify(this.currentUser));
+            this.isGuestMode = true;
+            this.updateUserDisplay();
+            this.showGuestBanner();
+        }
+    }
+
+    showGuestBanner() {
+        const guestBanner = document.getElementById('guestBanner');
+        if (guestBanner) {
+            guestBanner.style.display = 'block';
+        }
+    }
+
     updateUserDisplay() {
         const userNameElement = document.getElementById('userName');
-        if (this.currentUser?.user_metadata?.name) {
+        if (this.isGuestMode) {
+            userNameElement.textContent = 'Guest User';
+            userNameElement.style.color = 'var(--warning)';
+            userNameElement.title = 'You are using the app as a guest. Data will be stored locally.';
+        } else if (this.currentUser?.user_metadata?.name) {
             userNameElement.textContent = this.currentUser.user_metadata.name;
+            userNameElement.style.color = '';
+            userNameElement.title = '';
         } else if (this.currentUser?.email) {
             userNameElement.textContent = this.currentUser.email.split('@')[0];
+            userNameElement.style.color = '';
+            userNameElement.title = '';
         }
     }
 
@@ -145,24 +209,35 @@ class FinanceDashboard {
             console.log('🚪 Logout function called!');
             console.log('Current user:', this.currentUser?.email);
             
-            // Clear any local data
-            this.expenses = [];
-            this.monthlyBudget = 0;
-            this.monthlySavings = 0;
-            
-            console.log('Local data cleared, signing out from Supabase...');
-            
-            // Sign out from Supabase
-            const { error } = await supabase.auth.signOut();
-            if (error) {
-                throw error;
+            if (this.isGuestMode) {
+                // For guest users, just clear guest data and redirect
+                localStorage.removeItem('guestMode');
+                localStorage.removeItem('guestUser');
+                localStorage.removeItem('guestExpenses');
+                localStorage.removeItem('guestBudget');
+                localStorage.removeItem('guestCategories');
+                console.log('🧹 Guest data cleared');
+            } else {
+                // Clear any local data
+                this.expenses = [];
+                this.monthlyBudget = 0;
+                this.monthlySavings = 0;
+                
+                console.log('Local data cleared, signing out from Supabase...');
+                
+                // Sign out from Supabase
+                const { error } = await supabase.auth.signOut();
+                if (error) {
+                    throw error;
+                }
+                
+                console.log('✅ Supabase signout successful');
+                console.log('🧹 Clearing localStorage...');
+                
+                // Clear any stored data
+                localStorage.removeItem('financeDashboardData');
             }
             
-            console.log('✅ Supabase signout successful');
-            console.log('🧹 Clearing localStorage...');
-            
-            // Clear any stored data and redirect
-            localStorage.removeItem('financeDashboardData');
             localStorage.removeItem('dashboardTheme');
             
             console.log('🔄 Redirecting to login page...');
@@ -328,33 +403,38 @@ class FinanceDashboard {
 
             console.log('Saving budget:', { newBudget, newSavings, userId: this.currentUser.id });
 
-            // Ensure user profile exists first
-            await this.ensureUserProfile();
+            if (this.isGuestMode) {
+                // Save to localStorage for guest users
+                this.monthlyBudget = newBudget;
+                this.monthlySavings = newSavings;
+                this.saveGuestData();
+                console.log('Budget saved to localStorage for guest user');
+            } else {
+                // Save to Supabase for authenticated users
+                await this.ensureUserProfile();
 
-            // Save to Supabase
-            const currentMonth = new Date().toLocaleString('default', { month: 'long' }) + ' ' + new Date().getFullYear();
-            
-            const { data, error } = await supabase
-                .from('budgets')
-                .upsert({
-                    user_id: this.currentUser.id,
-                    month: currentMonth,
-                    total_budget: newBudget,
-                    created_at: new Date().toISOString()
-                }, {
-                    onConflict: 'user_id,month'
-                });
+                const currentMonth = new Date().toLocaleString('default', { month: 'long' }) + ' ' + new Date().getFullYear();
+                
+                const { data, error } = await supabase
+                    .from('budgets')
+                    .upsert({
+                        user_id: this.currentUser.id,
+                        month: currentMonth,
+                        total_budget: newBudget,
+                        created_at: new Date().toISOString()
+                    }, {
+                        onConflict: 'user_id,month'
+                    });
 
-            if (error) {
-                console.error('Error saving budget to Supabase:', error);
-                throw error;
+                if (error) {
+                    console.error('Error saving budget to Supabase:', error);
+                    throw error;
+                }
+
+                console.log('Budget saved to Supabase:', data);
+                this.monthlyBudget = newBudget;
+                this.monthlySavings = newSavings;
             }
-
-            console.log('Budget saved to Supabase:', data);
-
-            // Update local state
-            this.monthlyBudget = newBudget;
-            this.monthlySavings = newSavings;
             
             // Update dashboard
             this.updateDashboard();
@@ -393,8 +473,33 @@ class FinanceDashboard {
         try {
             console.log('Adding expense:', { amount, category, date, description });
             
-            // Ensure user profile exists first
-            await this.ensureUserProfile();
+            if (this.isGuestMode) {
+                // For guest users, save to localStorage
+                const newExpense = {
+                    id: Date.now() + Math.random(), // Generate unique ID
+                    amount: amount,
+                    category: category,
+                    date: date,
+                    description: description,
+                    timestamp: new Date().toISOString()
+                };
+
+                // Add to local array
+                this.expenses.push(newExpense);
+                
+                // Add category if it doesn't exist
+                if (!this.categories.includes(category)) {
+                    this.categories.push(category);
+                    this.updateCategorySelect();
+                }
+                
+                // Save to localStorage
+                this.saveGuestData();
+                
+                console.log('Expense saved to localStorage for guest user:', newExpense);
+            } else {
+                // For authenticated users, save to Supabase
+                await this.ensureUserProfile();
 
             // Get or create category
             let categoryId;
@@ -470,6 +575,7 @@ class FinanceDashboard {
             this.expenses.push(newExpense);
             
             console.log('Total expenses in local array:', this.expenses.length);
+            }
             
             this.updateDashboard();
             this.renderExpensesList();
@@ -1311,86 +1417,12 @@ class FinanceDashboard {
 
     async loadUserData() {
         try {
-            // Ensure user profile exists first
-            await this.ensureUserProfile();
-
-            // Load user profile
-            const { data: profile, error: profileError } = await supabase
-                .from('users')
-                .select('*')
-                .eq('id', this.currentUser.id)
-                .single();
-
-            if (profileError && profileError.code !== 'PGRST116') {
-                console.error('Error loading user profile:', profileError);
-            }
-
-            // Load categories
-            const { data: categories, error: categoriesError } = await supabase
-                .from('categories')
-                .select('*')
-                .eq('user_id', this.currentUser.id)
-                .order('created_at', { ascending: true });
-
-            if (categoriesError) {
-                console.error('Error loading categories:', categoriesError);
+            if (this.isGuestMode) {
+                // Load guest data from localStorage
+                this.loadGuestData();
             } else {
-                this.categories = categories.map(cat => cat.category_name);
-                this.updateCategorySelect();
-            }
-
-            // Create default categories if user has none
-            if (this.categories.length === 0) {
-                await this.createDefaultCategories();
-            }
-
-            // Load current month's budget
-            const currentMonth = new Date().toLocaleString('default', { month: 'long' }) + ' ' + new Date().getFullYear();
-            const { data: budget, error: budgetError } = await supabase
-                .from('budgets')
-                .select('*')
-                .eq('user_id', this.currentUser.id)
-                .eq('month', currentMonth)
-                .single();
-
-            if (budgetError && budgetError.code !== 'PGRST116') {
-                console.error('Error loading budget:', budgetError);
-            } else if (budget) {
-                this.monthlyBudget = budget.total_budget;
-            }
-
-            // Load expenses for current month with proper join
-            const currentMonthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
-            const currentMonthEnd = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0];
-
-            const { data: expenses, error: expensesError } = await supabase
-                .from('expenses')
-                .select(`
-                    id,
-                    amount,
-                    description,
-                    date,
-                    created_at,
-                    categories!inner(category_name)
-                `)
-                .eq('user_id', this.currentUser.id)
-                .gte('date', currentMonthStart)
-                .lte('date', currentMonthEnd)
-                .order('date', { ascending: false });
-
-            if (expensesError) {
-                console.error('Error loading expenses:', expensesError);
-            } else {
-                this.expenses = expenses.map(exp => ({
-                    id: exp.id,
-                    amount: exp.amount,
-                    category: exp.categories.category_name,
-                    date: exp.date,
-                    description: exp.description,
-                    timestamp: exp.created_at
-                }));
-                
-                console.log('Loaded expenses:', this.expenses);
+                // Load authenticated user data from Supabase
+                await this.loadAuthenticatedUserData();
             }
 
             // Force refresh charts after data is loaded
@@ -1400,6 +1432,152 @@ class FinanceDashboard {
 
         } catch (error) {
             console.error('Error loading user data:', error);
+        }
+    }
+
+    loadGuestData() {
+        // Load guest expenses
+        const guestExpenses = localStorage.getItem('guestExpenses');
+        if (guestExpenses) {
+            this.expenses = JSON.parse(guestExpenses);
+        } else {
+            this.expenses = [];
+        }
+
+        // Load guest budget
+        const guestBudget = localStorage.getItem('guestBudget');
+        if (guestBudget) {
+            const budgetData = JSON.parse(guestBudget);
+            this.monthlyBudget = budgetData.monthlyBudget || 0;
+            this.monthlySavings = budgetData.monthlySavings || 0;
+        }
+
+        // Load guest categories
+        const guestCategories = localStorage.getItem('guestCategories');
+        if (guestCategories) {
+            this.categories = JSON.parse(guestCategories);
+        } else {
+            // Set default categories for guest
+            this.categories = [
+                'Food 🍔',
+                'Shopping 🛍️',
+                'Bills 💡',
+                'Transportation 🚗',
+                'Entertainment 🎬',
+                'Healthcare 🏥',
+                'Education 📚',
+                'Travel ✈️',
+                'Utilities 🔧',
+                'Other 📦'
+            ];
+            this.saveGuestData();
+        }
+
+        this.updateCategorySelect();
+        console.log('Guest data loaded:', { 
+            expenses: this.expenses.length, 
+            budget: this.monthlyBudget, 
+            categories: this.categories.length 
+        });
+    }
+
+    saveGuestData() {
+        // Save guest expenses
+        localStorage.setItem('guestExpenses', JSON.stringify(this.expenses));
+        
+        // Save guest budget
+        localStorage.setItem('guestBudget', JSON.stringify({
+            monthlyBudget: this.monthlyBudget,
+            monthlySavings: this.monthlySavings
+        }));
+        
+        // Save guest categories
+        localStorage.setItem('guestCategories', JSON.stringify(this.categories));
+        
+        console.log('Guest data saved to localStorage');
+    }
+
+    async loadAuthenticatedUserData() {
+        // Ensure user profile exists first
+        await this.ensureUserProfile();
+
+        // Load user profile
+        const { data: profile, error: profileError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', this.currentUser.id)
+            .single();
+
+        if (profileError && profileError.code !== 'PGRST116') {
+            console.error('Error loading user profile:', profileError);
+        }
+
+        // Load categories
+        const { data: categories, error: categoriesError } = await supabase
+            .from('categories')
+            .select('*')
+            .eq('user_id', this.currentUser.id)
+            .order('created_at', { ascending: true });
+
+        if (categoriesError) {
+            console.error('Error loading categories:', categoriesError);
+        } else {
+            this.categories = categories.map(cat => cat.category_name);
+            this.updateCategorySelect();
+        }
+
+        // Create default categories if user has none
+        if (this.categories.length === 0) {
+            await this.createDefaultCategories();
+        }
+
+        // Load current month's budget
+        const currentMonth = new Date().toLocaleString('default', { month: 'long' }) + ' ' + new Date().getFullYear();
+        const { data: budget, error: budgetError } = await supabase
+            .from('budgets')
+            .select('*')
+            .eq('user_id', this.currentUser.id)
+            .eq('month', currentMonth)
+            .single();
+
+        if (budgetError && budgetError.code !== 'PGRST116') {
+            console.error('Error loading budget:', budgetError);
+        } else if (budget) {
+            this.monthlyBudget = budget.total_budget;
+        }
+
+        // Load expenses for current month with proper join
+        const currentMonthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+        const currentMonthEnd = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0];
+
+        const { data: expenses, error: expensesError } = await supabase
+            .from('expenses')
+            .select(`
+                id,
+                amount,
+                description,
+                date,
+                created_at,
+                categories!inner(category_name)
+            `)
+            .eq('user_id', this.currentUser.id)
+            .gte('date', currentMonthStart)
+            .lte('date', currentMonthEnd)
+            .order('date', { ascending: false });
+
+        if (expensesError) {
+            console.error('Error loading expenses:', expensesError);
+        } else {
+            this.expenses = expenses.map(exp => ({
+                id: exp.id,
+                amount: exp.amount,
+                category: exp.categories.category_name,
+                date: exp.date,
+                description: exp.description,
+                timestamp: exp.created_at
+            }));
+            
+            console.log('Loaded expenses:', this.expenses);
         }
     }
 

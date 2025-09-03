@@ -1228,6 +1228,88 @@ select:focus {
     border-top: 1px solid var(--border-color);
 }
 
+.form-divider {
+    position: relative;
+    text-align: center;
+    margin: var(--spacing-lg) 0;
+}
+
+.form-divider::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: var(--border-color);
+}
+
+.divider-text {
+    background: var(--bg-secondary);
+    color: var(--text-muted);
+    padding: 0 var(--spacing-sm);
+    font-size: 0.875rem;
+    position: relative;
+    z-index: 1;
+}
+
+/* Guest Banner Styles */
+.guest-banner {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: white;
+    padding: var(--spacing-sm) 0;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.guest-banner-content {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 var(--spacing-md);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.guest-banner-icon {
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.guest-banner-text {
+    flex: 1;
+    font-size: 0.875rem;
+    line-height: 1.4;
+}
+
+.guest-banner-text a {
+    color: white;
+    text-decoration: underline;
+    font-weight: 500;
+}
+
+.guest-banner-text a:hover {
+    text-decoration: none;
+}
+
+.guest-banner-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+    flex-shrink: 0;
+}
+
+.guest-banner-close:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
 .signup-text {
     font-size: 0.875rem;
     color: var(--text-secondary);
